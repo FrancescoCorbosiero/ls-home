@@ -1,0 +1,38 @@
+  <section class="track_section layout_padding" id="tracking" hidden>
+    <div class="track_bg_box">
+<!--      <img src="images/track-bg.jpg" alt="">-->
+    </div>
+    <div class="container" id="tracking-div-id">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="heading_container">
+            <h2>
+              Tracking spedizione
+            </h2>
+          </div>
+          <p>
+            Inserisci il codice di riferimento della spedizione per effettuare il tracking.
+          </p>
+            <input id="tracking-code-input-id" type="text" placeholder="Inserisci il codice di riferimento" />
+            <button type="submit" id="tracking-btn-id">
+              Track
+            </button>
+
+        </div>
+        <div class="col-md-6" id="tracking-state-div-id" hidden>
+          <div class="heading_container">
+            <h2 id="tracking-h2-id">
+            </h2>
+          </div>
+          <p>
+            La tua spedizione attualmente è in stato di:
+          </p>
+          <div class="heading_container">
+            <h2 id="tracking-state-txt-id">
+              Non Gestito
+            </h2>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
