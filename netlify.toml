@@ -1,0 +1,5 @@
+# Netlify: the site is plain static files in public/ — there is no build step.
+# Headers and redirects live in public/_headers and public/_redirects, so they
+# also apply when the public/ folder is deployed by drag and drop.
+[build]
+  publish = "public"

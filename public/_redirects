@@ -1,0 +1,9 @@
+# Old template URLs -> new pages (permanent)
+/about.html      /chi-siamo/   301
+/service.html    /servizi/     301
+/contact.html    /contatti/    301
+/about           /chi-siamo/   301
+/service         /servizi/     301
+/contact         /contatti/    301
+/servizi.html    /servizi/     301
+/contatti.html   /contatti/    301
