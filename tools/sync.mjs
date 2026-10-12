@@ -280,6 +280,12 @@ if (CHECK) {
 }
 
 // ---------------------------------------------------------------- report
+for (const f of walk(join(PUBLIC, 'js'), ['.js'])) {
+  const js = readFileSync(f, 'utf8');
+  for (const m of js.matchAll(/icon\(\s*'([a-z0-9-]+)'/g)) usedIcons.add(`i-${m[1]}`);
+  for (const m of js.matchAll(/#i-([a-z0-9-]+)/g)) usedIcons.add(`i-${m[1]}`);
+}
+for (const id of usedIcons) if (!iconIds.has(id)) err('public/js', `unknown icon #${id}`);
 const unused = [...iconIds].filter((id) => !usedIcons.has(id));
 for (const w of warnings) console.warn(`warn  ${w}`);
 for (const e of errors) console.error(`error ${e}`);
