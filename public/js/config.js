@@ -8,7 +8,7 @@ export const BUSINESS = {
   phoneDisplay: '+39\u00A0329\u00A0239\u00A06962',
   whatsapp: '393292396962',
   email: 'logisticasanchezmb@gmail.com',
-  hours: 'Lun–Ven 8:00–18:00',
+  hours: 'Lun–Ven 8:00–18:00, Sab 8:00–12:00',
 };
 
 /**
