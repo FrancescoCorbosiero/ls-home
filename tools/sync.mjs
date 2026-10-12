@@ -16,7 +16,8 @@
  * The current page comes from <body data-page="servizi/groupage">: links in a partial
  * carrying data-nav="servizi/groupage" get aria-current="page", and links carrying
  * the parent section (data-nav="servizi") get aria-current="true".
- * Tokens available in partials: {{year}}, {{site}}.
+ * Tokens available in partials: {{year}}, {{site}}. Comments starting with "TODO" are
+ * kept in partials/ but not copied into the published pages.
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, dirname, resolve, sep } from 'node:path';
@@ -85,6 +86,7 @@ const partials = Object.fromEntries(
 
 function renderPartial(name, page) {
   let s = partials[name]
+    .replace(/[ \t]*<!-- TODO[\s\S]*?-->\n?/g, '') // reminders stay in partials/, not in published pages
     .replaceAll('{{year}}', String(new Date().getFullYear()))
     .replaceAll('{{site}}', SITE);
   // Active state: exact page -> aria-current="page"; ancestor section -> aria-current="true".

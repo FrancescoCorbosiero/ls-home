@@ -40,7 +40,7 @@
 <div class="topbar">
   <div class="container topbar-row">
     <ul class="topbar-list" role="list">
-      <li><a href="tel:+393292396962"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-phone"/></svg>+39 329 239 6962</a></li>
+      <li><a href="tel:+393292396962"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-phone"/></svg>+39&nbsp;329&nbsp;239&nbsp;6962</a></li>
       <li><a href="mailto:logisticasanchezmb@gmail.com"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-mail"/></svg>logisticasanchezmb@gmail.com</a></li>
       <li><a href="/contatti/#dove-siamo"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-map-pin"/></svg>Via dei Meiani 90, Seregno (MB)</a></li>
     </ul>
@@ -52,7 +52,7 @@
 </div>
 <header class="site-header" data-header>
   <div class="container header-row">
-    <a class="brand" href="/" aria-label="Logistica Sanchez, vai alla home">
+    <a class="brand" href="/">
       <img class="brand-mark" src="/img/brand/mark.svg" width="46" height="46" alt="">
       <span class="brand-text"><span class="brand-name">Logistica Sanchez</span><span class="brand-tag">Il pallet espresso</span></span>
     </a>
@@ -95,7 +95,7 @@
 </header>
 <dialog class="drawer" id="drawer" aria-label="Menu di navigazione">
   <div class="drawer-head">
-    <a class="brand" href="/" aria-label="Logistica Sanchez, vai alla home">
+    <a class="brand" href="/">
       <img class="brand-mark" src="/img/brand/mark.svg" width="40" height="40" alt="">
       <span class="brand-text"><span class="brand-name">Logistica Sanchez</span><span class="brand-tag">Il pallet espresso</span></span>
     </a>
@@ -149,8 +149,8 @@
     <div class="container layout-aside">
       <form class="wizard" id="modulo" data-quote name="preventivo" method="POST" action="/grazie/" data-netlify="true" netlify-honeypot="bot-field">
         <input type="hidden" name="form-name" value="preventivo">
-        <p class="hp-field" aria-hidden="true"><label>Non compilare questo campo: <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
-        <ol class="wizard-progress" aria-label="Avanzamento della richiesta">
+        <p class="hp-field" aria-hidden="true"><label>Non compilare questo campo: <input name="bot-field" type="text" tabindex="-1" autocomplete="off"></label></p>
+        <ol class="wizard-progress" aria-hidden="true">
           <li class="is-current"><span>1. Servizio</span></li>
           <li><span>2. Percorso</span></li>
           <li><span>3. Merce</span></li>
@@ -259,10 +259,10 @@
           <div class="wizard-block">
             <p class="label">Servizi accessori <span class="opt">(facoltativi)</span></p>
             <div class="choice-grid">
-              <label class="check-card"><input type="checkbox" name="servizi_extra" value="Sponda idraulica"><span>Sponda idraulica<small>A destinazione non c'è un muletto</small></span></label>
-              <label class="check-card"><input type="checkbox" name="servizi_extra" value="Consegna su appuntamento"><span>Consegna su appuntamento<small>Giorno e fascia oraria concordati</small></span></label>
-              <label class="check-card"><input type="checkbox" name="servizi_extra" value="Preavviso al destinatario"><span>Preavviso al destinatario<small>Telefonata prima della consegna</small></span></label>
-              <label class="check-card"><input type="checkbox" name="servizi_extra" value="Merce fragile o non sovrapponibile"><span>Merce fragile o non sovrapponibile<small>Viaggia senza altri carichi sopra</small></span></label>
+              <label class="check-card"><input type="checkbox" name="servizi_extra[]" value="Sponda idraulica"><span>Sponda idraulica<small>A destinazione non c'è un muletto</small></span></label>
+              <label class="check-card"><input type="checkbox" name="servizi_extra[]" value="Consegna su appuntamento"><span>Consegna su appuntamento<small>Giorno e fascia oraria concordati</small></span></label>
+              <label class="check-card"><input type="checkbox" name="servizi_extra[]" value="Preavviso al destinatario"><span>Preavviso al destinatario<small>Telefonata prima della consegna</small></span></label>
+              <label class="check-card"><input type="checkbox" name="servizi_extra[]" value="Merce fragile o non sovrapponibile"><span>Merce fragile o non sovrapponibile<small>Viaggia senza altri carichi sopra</small></span></label>
             </div>
           </div>
         </fieldset>
@@ -270,7 +270,8 @@
         <fieldset class="wizard-step" data-step>
           <legend tabindex="-1">A chi inviamo il preventivo?</legend>
           <p class="step-intro">Controlla il riepilogo e lasciaci i tuoi contatti: ti rispondiamo al più presto, negli orari d'ufficio.</p>
-          <dl class="summary" data-summary aria-label="Riepilogo della richiesta"></dl>
+          <p class="visually-hidden">Riepilogo della richiesta:</p>
+          <dl class="summary" data-summary></dl>
           <div class="form-grid cols-2">
             <div class="field">
           <label for="q-nome">Nome e cognome</label>
@@ -289,7 +290,7 @@
         </div>
             <div class="field">
           <label for="q-tel">Telefono</label>
-          <input class="input" id="q-tel" name="telefono" type="tel" required aria-describedby="q-tel-err" autocomplete="tel" pattern="[0-9+ ()./-]{{6,20}}" data-msg="Inserisci un numero di telefono valido." placeholder="Es. 333 123 4567">
+          <input class="input" id="q-tel" name="telefono" type="tel" required aria-describedby="q-tel-err" autocomplete="tel" pattern="[0-9+\s\(\)\.\/\-]{6,20}" data-msg="Inserisci un numero di telefono valido." placeholder="Es. 333 123 4567">
           <p class="field-error" id="q-tel-err"></p>
         </div>
             <div class="field span-2" data-group>
@@ -306,7 +307,7 @@
               <textarea class="textarea" id="q-note" name="note" rows="4" placeholder="Orari di ritiro, accessi, urgenze o qualsiasi dettaglio utile"></textarea>
             </div>
             <div class="field span-2">
-          <label class="check" for="q-privacy"><input id="q-privacy" name="privacy" type="checkbox" value="accettata" required aria-describedby="q-privacy-err"> <span>Ho letto l'<a href="/privacy/" target="_blank" rel="noopener">informativa privacy</a> e acconsento al trattamento dei dati per ricevere una risposta.</span></label>
+          <label class="check"><input id="q-privacy" name="privacy" type="checkbox" value="accettata" required aria-describedby="q-privacy-err"> <span>Ho letto l'<a href="/privacy/" target="_blank" rel="noopener">informativa privacy</a> e acconsento al trattamento dei dati per ricevere una risposta.</span></label>
           <p class="field-error" id="q-privacy-err"></p>
         </div>
           </div>
@@ -357,7 +358,7 @@
 <footer class="site-footer">
   <div class="container footer-grid">
     <div class="footer-brand">
-      <a class="footer-logo" href="/" aria-label="Logistica Sanchez, vai alla home"><img src="/img/brand/logo-white.svg" width="214" height="100" alt="Logistica Sanchez" loading="lazy"></a>
+      <a class="footer-logo" href="/"><img src="/img/brand/logo-white.svg" width="214" height="100" alt="Logistica Sanchez" loading="lazy"></a>
       <p>Il pallet espresso: spedizioni di pallet in tutta Italia in 24–72 ore dal nostro hub di Seregno, nel cuore della Brianza.</p>
       <address class="footer-nap">
         <strong>Logistica Sanchez</strong><br>
@@ -399,7 +400,7 @@
     <div class="footer-col footer-contacts">
       <p class="footer-title">Contatti</p>
       <ul role="list">
-        <li><a href="tel:+393292396962"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-phone"/></svg>+39 329 239 6962</a></li>
+        <li><a href="tel:+393292396962"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-phone"/></svg>+39&nbsp;329&nbsp;239&nbsp;6962</a></li>
         <li><a href="https://wa.me/393292396962" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-whatsapp"/></svg>WhatsApp</a></li>
         <li><a href="mailto:logisticasanchezmb@gmail.com"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-mail"/></svg><span>logisticasanchezmb@<wbr>gmail.com</span></a></li>
         <li><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-clock"/></svg>Lun–Ven 8:00–18:00</li>
@@ -408,7 +409,6 @@
   </div>
   <div class="footer-bottom">
     <div class="container footer-bottom-row">
-      <!-- TODO prima del go-live: aggiungere la Partita IVA, obbligatoria sui siti aziendali (art. 35 DPR 633/1972), es. " · P.IVA IT01234567890" -->
       <p>© <span data-year>2026</span> Logistica Sanchez · Via dei Meiani 90, 20831 Seregno (MB)</p>
       <ul role="list">
         <li><a href="/privacy/">Privacy</a></li>

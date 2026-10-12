@@ -5,7 +5,7 @@
 export const BUSINESS = {
   name: 'Logistica Sanchez',
   phone: '+393292396962',
-  phoneDisplay: '+39 329 239 6962',
+  phoneDisplay: '+39\u00A0329\u00A0239\u00A06962',
   whatsapp: '393292396962',
   email: 'logisticasanchezmb@gmail.com',
   hours: 'Lun–Ven 8:00–18:00',
@@ -21,6 +21,8 @@ export const BUSINESS = {
  * portalUrl: alternatively, a portal page that shows the shipment; the visitor
  *            is redirected there, e.g. "https://portale.example.it/tracking?code={code}"
  * demoCode:  code that renders a sample timeline (labelled as an example).
+ * If the endpoint lives on another domain, add it to "connect-src" in
+ * public/_headers (Content-Security-Policy) and allow CORS on the portal.
  */
 export const TRACKING = {
   endpoint: '',

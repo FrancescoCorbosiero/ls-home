@@ -19,7 +19,7 @@ function values(form) {
   const fd = new FormData(form);
   const get = (k) => String(fd.get(k) ?? '').trim();
   const date = get('data_ritiro');
-  const extras = fd.getAll('servizi_extra').map(String);
+  const extras = fd.getAll('servizi_extra[]').map(String);
   return {
     servizio: LABELS.servizio[get('servizio')] || '',
     data: date ? new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' }) : 'Da concordare',

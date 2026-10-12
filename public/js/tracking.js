@@ -106,7 +106,7 @@ function renderShipment(s, { demo = false } = {}) {
       </div>
       ${updated ? `<p class="muted mb-0">Ultimo aggiornamento:<br><strong>${h(fmtDateTime.format(updated))}</strong></p>` : ''}
     </div>
-    ${status === 'exception' ? '' : `<ol class="progress" aria-label="Avanzamento della spedizione">${progress}</ol>`}
+    ${status === 'exception' ? '' : `<ol class="progress" role="list" aria-label="Avanzamento della spedizione">${progress}</ol>`}
     ${meta ? `<dl class="track-meta">${meta}</dl>` : ''}
     ${events ? `<h3 class="h4">Cronologia</h3><ol class="events" reversed>${events}</ol>` : ''}
     <div class="track-actions">

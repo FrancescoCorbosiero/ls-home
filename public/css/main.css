@@ -30,7 +30,7 @@
   --navy-700: #13466d;
   --navy-600: #1f5b87;
   --teal-700: #066a7b;
-  --teal-600: #0a7f94;
+  --teal-600: #097489;
   --teal-500: #0a97b0;
   --teal-300: #86cbd8;
   --teal-100: #d7eff3;
@@ -330,6 +330,22 @@ hr {
   .grid-2.wide-left {
     grid-template-columns: 1.15fr 0.85fr;
   }
+}
+
+/* Single-column grids on small screens: minmax(0, 1fr) lets wide children
+   (tables, long words) scroll inside their own box instead of widening the page. */
+.split,
+.layout-aside,
+.article-layout,
+.coverage-grid,
+.why-grid,
+.hero-grid,
+.page-hero-grid,
+.grid-2,
+.service-block,
+.cta-inner,
+.pallet-panel {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* ---------- Kicker ---------- */
@@ -663,11 +679,13 @@ hr {
   background: var(--teal-500);
 }
 .nav-caret {
+  position: relative;
+  z-index: 1;
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 30px;
-  margin-left: -10px;
+  width: 30px;
+  height: 32px;
+  margin-left: -8px;
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -683,11 +701,16 @@ hr {
 .nav-caret[aria-expanded="true"] .icon {
   transform: rotate(180deg);
 }
+.nav-item.has-mega {
+  position: static;
+}
+/* Anchored to the sticky header (its containing block) and centred, so the
+   closed-but-laid-out panel can never stick out of the viewport. */
 .mega {
   position: absolute;
-  top: calc(100% + 14px);
-  left: -20px;
-  width: min(780px, 92vw);
+  top: calc(100% - 6px);
+  left: 50%;
+  width: min(820px, calc(100vw - 32px));
   display: grid;
   grid-template-columns: 1.45fr 1fr;
   background: #fff;
@@ -696,7 +719,7 @@ hr {
   box-shadow: var(--shadow-lg);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(8px);
+  transform: translate(-50%, 8px);
   transition:
     opacity 0.2s var(--ease),
     transform 0.2s var(--ease),
@@ -707,21 +730,21 @@ hr {
   position: absolute;
   left: 0;
   right: 0;
-  top: -18px;
-  height: 18px;
+  top: -24px;
+  height: 24px;
 }
 @media (hover: hover) {
   .has-mega:hover .mega {
     opacity: 1;
     visibility: visible;
-    transform: none;
+    transform: translate(-50%, 0);
     transition-delay: 0s;
   }
 }
 .has-mega.is-open .mega {
   opacity: 1;
   visibility: visible;
-  transform: none;
+  transform: translate(-50%, 0);
   transition-delay: 0s;
 }
 .has-mega.is-closing .mega {
@@ -1162,8 +1185,13 @@ hr {
 .hero-media {
   position: relative;
   z-index: 0;
-  margin: 0 0 0 auto;
+  margin: 0 auto;
   width: min(100%, 560px);
+}
+@media (min-width: 1024px) {
+  .hero-media {
+    margin: 0 0 0 auto;
+  }
 }
 .hero-media::before {
   content: "";
@@ -1773,19 +1801,23 @@ hr {
 .card h3 {
   margin-bottom: 0.45em;
 }
+.card h2 a,
 .card h3 a {
   color: inherit;
   text-decoration: none;
 }
+.card h2 a::after,
 .card h3 a::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
 }
+.card h2 a:focus-visible,
 .card h3 a:focus-visible {
   outline: none;
 }
+.card:has(h2 a:focus-visible),
 .card:has(h3 a:focus-visible) {
   outline: 3px solid var(--teal-500);
   outline-offset: 3px;
@@ -2882,8 +2914,9 @@ hr {
   gap: 6px 18px;
 }
 .footer-bottom a {
-  color: rgb(255 255 255 / 0.72);
-  text-decoration: none;
+  color: rgb(255 255 255 / 0.78);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 .footer-bottom a:hover {
   color: #fff;
@@ -3028,11 +3061,11 @@ hr {
   content: "";
   position: absolute;
   z-index: -1;
-  right: max(-80px, calc(50% - 760px));
-  bottom: -90px;
-  width: clamp(180px, 26vw, 340px);
+  right: max(-60px, calc(50% - 740px));
+  bottom: -70px;
+  width: clamp(120px, 17vw, 240px);
   aspect-ratio: 1;
-  border: clamp(10px, 1.4vw, 18px) solid var(--lime-300);
+  border: clamp(9px, 1.2vw, 15px) solid var(--lime-300);
   opacity: 0.9;
 }
 .page-hero h1 {
@@ -3070,8 +3103,8 @@ hr {
   padding: 24px;
   border: 1px solid rgb(255 255 255 / 0.12);
   border-radius: var(--r-lg);
-  background: rgb(255 255 255 / 0.05);
-  backdrop-filter: blur(6px);
+  background: var(--navy-800);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.18);
 }
 .page-hero-aside .ticks li {
   color: rgb(255 255 255 / 0.85);
@@ -4338,7 +4371,13 @@ hr {
   margin: 0;
   font-size: 0.85rem;
   font-weight: 700;
+  white-space: nowrap;
   color: var(--mute);
+}
+@media (max-width: 479px) {
+  .wizard-count {
+    display: none;
+  }
 }
 [data-track-result]:focus {
   outline: none;

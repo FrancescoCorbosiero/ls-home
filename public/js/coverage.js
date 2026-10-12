@@ -28,6 +28,7 @@ async function enhance(fig) {
   svg.removeAttribute('width');
   svg.removeAttribute('height');
   for (const t of svg.querySelectorAll('path > title')) t.remove();
+  svg.querySelector('style')?.remove(); // styles live in main.css (a strict CSP blocks inline <style>)
   img.replaceWith(svg);
 
   const tip = document.createElement('div');
