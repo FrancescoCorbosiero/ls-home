@@ -86,10 +86,11 @@ message there. To try them end to end, run `npm install` once and then
 3. **Domain**: canonical URLs, sitemap and structured data use
    `https://logisticasanchez.com` (no `www`, like the current production site). Make
    it the primary domain in Netlify, so `www` redirects to it. Keep it that way: the
-   backend only accepts browser calls (CORS) from the origins it knows, and today
-   that is `https://logisticasanchez.com`. To change it, run
-   `node tools/sync.mjs --domain https://your-domain.it`, commit the result, and
-   ask for the new origin to be allowed on the backend.
+   backend only accepts browser calls (CORS) from the origins in its `ALLOWED_ORIGINS`
+   setting (the backend repository lists `https://logisticasanchez.com`, `www` and
+   `app.`), so tracking does not work from a `*.netlify.app` preview address. To change
+   the domain, run `node tools/sync.mjs --domain https://your-domain.it`, commit the
+   result, and ask for the new origin to be allowed on the backend.
 
 ## Backend (tracking)
 
@@ -211,7 +212,9 @@ all pages, plus `Service`, `FAQPage`, `BlogPosting`, `BreadcrumbList` where rele
 in Chromium browsers (Speculation Rules). Old URLs (`about.html`, `service.html`,
 `contact.html`, `tracking.html`…) redirect with a 301, and the anchors of the
 previous home page (`/#chisiamo`, `/#contattaci`, `/#tracking`) open the matching
-page.
+page. Paths under `/mono/` are passed on to the backend (`_redirects`, a Netlify
+proxy): the links and the logo in the e-mails the backend sends use
+`https://logisticasanchez.com/mono/…` when its `EMAIL_ORIGIN` is the apex, its default.
 
 ## Before going live
 
@@ -223,6 +226,9 @@ page.
 - [ ] Make `logisticasanchez.com` the primary domain (see *Deploy*).
 - [ ] Look up a real shipment code on `/tracking/` from the published site and check
       that the status shows up (this proves CORS and the CSP are right).
+- [ ] Open `https://logisticasanchez.com/mono/img/logistica-sanchez-logo.jpg` on the
+      published site: it must show the logo of the backend's e-mails, not a 404 (the
+      e-mail links take the same route).
 - [ ] Submit `sitemap.xml` to Google Search Console and link the site from the Google
       Business Profile.
 - [ ] Replace the stock truck photo (`img/photos/`) with real photos of the hub and
