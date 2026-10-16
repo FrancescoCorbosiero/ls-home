@@ -8,30 +8,26 @@
  */
 import { BUSINESS, TRACKING, waLink, mailLink, escapeHtml as h, icon } from './config.js';
 
-const STEPS = [
-  ['created', 'Presa in carico'],
-  ['picked_up', 'Ritirata'],
-  ['in_transit', 'In viaggio'],
-  ['out_for_delivery', 'In consegna'],
-  ['delivered', 'Consegnata'],
+/* Tracking states of the backend: enumeration "statoTracking" (GET /mono/api/enumeration/statoTracking),
+   the same ids, names and labels the CMS uses to set them. trace/state answers one of them in "status".
+   title: what the customer reads; step: label in the progress bar (NON_GESTITO comes before the bar). */
+const STATES = [
+  { id: 0, name: 'NON_GESTITO', label: 'Non gestito', title: 'In attesa di presa in carico', icon: 'clipboard-list' },
+  { id: 1, name: 'PRESA', label: 'Presa in carico', title: 'Presa in carico', step: 'Presa in carico', icon: 'package-check' },
+  { id: 2, name: 'TRANSITO', label: 'Transito', title: 'In transito', step: 'In transito', icon: 'truck' },
+  { id: 3, name: 'TERMINAL_DEST', label: 'Terminal destinatario', title: 'Arrivata al terminal di destinazione', step: 'Terminal di destinazione', icon: 'warehouse' },
+  { id: 4, name: 'ASSEGNATO', label: 'Assegnato', title: 'Affidata al mezzo per la consegna', step: 'In consegna', icon: 'navigation' },
+  { id: 5, name: 'CONSEGNATO', label: 'Consegnato', title: 'Consegnata', step: 'Consegnata', icon: 'circle-check' },
 ];
-const STATE = {
-  created: ['Spedizione presa in carico', 'clipboard-list'],
-  picked_up: ['Merce ritirata', 'package-check'],
-  in_transit: ['In viaggio verso la destinazione', 'truck'],
-  out_for_delivery: ['In consegna oggi', 'navigation'],
-  delivered: ['Consegnata', 'circle-check'],
-  exception: ['Serve un tuo riscontro', 'triangle-alert'],
+const STEPS = STATES.filter((st) => st.step);
+const keyOf = (v) =>
+  String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+/** Finds a state by id (0–5), name ("TRANSITO") or backend label ("Terminal destinatario"). */
+const findState = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const k = keyOf(value);
+  return STATES.find((st) => String(st.id) === k || st.name === k || keyOf(st.label) === k) ?? null;
 };
-/* The backend answers with a free-text status label: match it to a step of the bar. */
-const KEYWORDS = [
-  ['delivered', /consegnat/i],
-  ['out_for_delivery', /in consegna|in distribuzione/i],
-  ['exception', /giacenz|anomali|respint|rifiutat|danneggiat|smarrit|bloccat/i],
-  ['in_transit', /transit|viaggio|partit|spedit|smistament/i],
-  ['picked_up', /ritirat|caricat/i],
-  ['created', /pres[ao] in carico|registrat|confermat|in attesa|ricevut/i],
-];
 // Codes are sent exactly as typed (minus spaces): the backend decides what is valid.
 const CODE_RE = /^[^\s<>"'`]{1,64}$/;
 const RECENT_KEY = 'ls_recent_codes';
@@ -67,40 +63,42 @@ function demoShipment() {
   if (eta.getDay() === 6) eta.setDate(eta.getDate() + 2);
   return {
     code: TRACKING.demoCode,
-    status: 'in_transit',
+    status: 'TRANSITO',
     origin: 'Seregno (MB)',
     destination: 'Bologna (BO)',
     pallets: 2,
     eta: eta.toISOString().slice(0, 10),
     updatedAt: ago(1),
     events: [
-      { time: ago(1), status: 'in_transit', location: 'Hub di Seregno (MB)', note: 'Partita verso la destinazione' },
-      { time: ago(5), status: 'picked_up', location: 'Monza (MB)', note: 'Ritirati 2 pallet EUR 120×80' },
-      { time: ago(26), status: 'created', location: 'Online', note: 'Spedizione presa in carico' },
+      { time: ago(1), status: 'TRANSITO', location: 'Hub di Seregno (MB)', note: 'Partita verso la destinazione' },
+      { time: ago(5), status: 'PRESA', location: 'Monza (MB)', note: 'Ritirati 2 pallet EUR 120×80' },
+      { time: ago(26), status: 'NON_GESTITO', location: 'Online', note: 'Spedizione registrata' },
     ],
   };
 }
 
-/** Backend answer -> shipment object. Accepts {status: "label"} and the richer README format. */
+/** Backend answer -> shipment object. Accepts {status} alone and the richer README format. */
 function normalize(code, data) {
-  const obj = typeof data === 'string' ? { status: data } : data && typeof data === 'object' ? data : {};
-  let raw = String(obj.status ?? '').trim();
+  const obj = typeof data === 'string' || typeof data === 'number' ? { status: data } : data && typeof data === 'object' ? data : {};
+  let value = obj.status;
+  if (value && typeof value === 'object') value = value.name ?? value.label ?? value.id; // the whole enum entry
+  const raw = String(value ?? '').trim();
   if (!raw) return null;
-  if (STATE[raw]) return { ...obj, code, status: raw };
-  raw = raw.replace(/_/g, ' ');
-  if (raw === raw.toUpperCase()) raw = raw.charAt(0) + raw.slice(1).toLowerCase(); // "IN_CONSEGNA" -> "In consegna"
-  const match = KEYWORDS.find(([, re]) => re.test(raw));
-  return { ...obj, code, status: match ? match[0] : null, label: raw };
+  const state = findState(raw);
+  // A status we do not know yet is still shown, as the backend wrote it.
+  const label = state ? null : raw === raw.toUpperCase() ? raw.charAt(0) + raw.slice(1).toLowerCase().replace(/_/g, ' ') : raw;
+  return { ...obj, code, state, label };
 }
 
 function renderShipment(s, { demo = false } = {}) {
-  const status = STATE[s.status] ? s.status : null;
-  const [fallbackTitle, ico] = STATE[status] ?? ['', 'package-search'];
-  const title = s.label || fallbackTitle;
-  const reached = STEPS.findIndex(([k]) => k === status);
-  const progress = STEPS.map(([key, label], i) => {
-    const cls = reached < 0 ? '' : i < reached ? 'is-done' : i === reached ? 'is-current' : '';
-    return `<li class="${cls}"${i === reached ? ' aria-current="step"' : ''}>${h(label)}</li>`;
+  const { state } = s;
+  const title = state ? state.title : s.label;
+  const ico = state ? state.icon : 'package-search';
+  const delivered = state?.name === 'CONSEGNATO';
+  const reached = state ? STEPS.indexOf(state) : -1;
+  const progress = STEPS.map((st, i) => {
+    const cls = i < reached ? 'is-done' : i === reached ? 'is-current' : '';
+    return `<li class="${cls}"${i === reached ? ' aria-current="step"' : ''}>${h(st.step)}</li>`;
   }).join('');
   const eta = asDate(s.eta);
   const updated = asDate(s.updatedAt);
@@ -108,7 +106,7 @@ function renderShipment(s, { demo = false } = {}) {
     ['Partenza', s.origin],
     ['Destinazione', s.destination],
     ['Colli', s.pallets ? `${s.pallets} pallet` : null],
-    [status === 'delivered' ? 'Consegnata' : 'Consegna prevista', eta ? fmtDate.format(eta) : null],
+    [delivered ? 'Consegnata' : 'Consegna prevista', eta ? fmtDate.format(eta) : null],
   ]
     .filter(([, v]) => v)
     .map(([k, v]) => `<div><dt>${h(k)}</dt><dd>${h(v)}</dd></div>`)
@@ -116,7 +114,7 @@ function renderShipment(s, { demo = false } = {}) {
   const events = (Array.isArray(s.events) ? s.events : [])
     .map((ev) => {
       const t = asDate(ev.time);
-      const label = STATE[ev.status]?.[0] ?? ev.status ?? '';
+      const label = findState(ev.status)?.title ?? ev.status ?? '';
       return `<li><time${t ? ` datetime="${h(t.toISOString())}"` : ''}>${t ? h(fmtDateTime.format(t)) : ''}</time><strong>${h(ev.note || label)}</strong>${ev.location ? `<span>${h(ev.location)}</span>` : ''}</li>`;
     })
     .join('');
@@ -125,11 +123,11 @@ function renderShipment(s, { demo = false } = {}) {
     <div class="track-head">
       <div>
         <p class="track-code">Spedizione ${h(s.code)}${demo ? ' · <span class="badge">Esempio dimostrativo</span>' : ''}</p>
-        <p class="track-state${status === 'delivered' ? ' is-delivered' : status === 'exception' ? ' is-exception' : ''}">${icon(ico)}${h(title)}</p>
+        <p class="track-state${delivered ? ' is-delivered' : ''}">${icon(ico)}${h(title)}</p>
       </div>
       ${updated ? `<p class="muted mb-0">Ultimo aggiornamento:<br><strong>${h(fmtDateTime.format(updated))}</strong></p>` : ''}
     </div>
-    ${reached < 0 ? '' : `<ol class="progress" role="list" aria-label="Avanzamento della spedizione">${progress}</ol>`}
+    ${state ? `<ol class="progress" role="list" aria-label="Avanzamento della spedizione">${progress}</ol>` : ''}
     ${meta ? `<dl class="track-meta">${meta}</dl>` : ''}
     ${events ? `<h3 class="h4">Cronologia</h3><ol class="events" reversed>${events}</ol>` : ''}
     <div class="track-actions">
