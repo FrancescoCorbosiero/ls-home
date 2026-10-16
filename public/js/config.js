@@ -12,22 +12,25 @@ export const BUSINESS = {
 };
 
 /**
- * Tracking integration. Leave both empty to use the built-in "ask us" flow
- * (the visitor sends the code via WhatsApp/email/phone in one tap).
+ * Tracking integration.
  *
- * endpoint:  JSON API of the client portal, "{code}" is replaced, e.g.
- *            "https://portale.example.it/api/tracking/{code}"
- *            Expected response — see README ("Tracking: formato JSON").
+ * endpoint:  backend tracking API. It is called with POST {"codice": "<code>"} and
+ *            answers {"status": "<status label>"}; any non-2xx answer means the
+ *            code is unknown. This is the same call the current production site
+ *            makes (see README, "Tracking"). The backend also accepts the richer
+ *            JSON described in the README (events, eta, pod…), drawn as a timeline.
+ *            Its origin must be listed in "connect-src" in public/_headers, and
+ *            the backend must allow CORS from the site's origin.
  * portalUrl: alternatively, a portal page that shows the shipment; the visitor
  *            is redirected there, e.g. "https://portale.example.it/tracking?code={code}"
- * demoCode:  code that renders a sample timeline (labelled as an example).
- * If the endpoint lives on another domain, add it to "connect-src" in
- * public/_headers (Content-Security-Policy) and allow CORS on the portal.
+ * Leave both empty to use the "ask us" flow (code sent via WhatsApp/email/phone).
+ * demoCode:  code that renders a sample timeline (labelled as an example); empty
+ *            in production so customers never see invented data.
  */
 export const TRACKING = {
-  endpoint: '',
+  endpoint: 'https://app.logisticasanchez.com/mono/api/order/trace/state',
   portalUrl: '',
-  demoCode: 'LS-DEMO',
+  demoCode: '',
   timeoutMs: 8000,
 };
 

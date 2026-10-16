@@ -1,7 +1,7 @@
 /**
  * Shipment tracking widget.
  *  - /tracking/?code=XXX runs a search on load (shareable links)
- *  - TRACKING.endpoint set   -> fetch JSON from the client portal and draw the timeline
+ *  - TRACKING.endpoint set   -> ask the backend (POST {codice}) and show the status
  *  - TRACKING.portalUrl set  -> redirect to the portal page
  *  - neither                 -> one-tap request of the status via WhatsApp / email / phone
  * Recent codes are remembered on this device only (localStorage).
@@ -23,7 +23,17 @@ const STATE = {
   delivered: ['Consegnata', 'circle-check'],
   exception: ['Serve un tuo riscontro', 'triangle-alert'],
 };
-const CODE_RE = /^[A-Z0-9][A-Z0-9-]{3,29}$/;
+/* The backend answers with a free-text status label: match it to a step of the bar. */
+const KEYWORDS = [
+  ['delivered', /consegnat/i],
+  ['out_for_delivery', /in consegna|in distribuzione/i],
+  ['exception', /giacenz|anomali|respint|rifiutat|danneggiat|smarrit|bloccat/i],
+  ['in_transit', /transit|viaggio|partit|spedit|smistament/i],
+  ['picked_up', /ritirat|caricat/i],
+  ['created', /pres[ao] in carico|registrat|confermat|in attesa|ricevut/i],
+];
+// Codes are sent exactly as typed (minus spaces): the backend decides what is valid.
+const CODE_RE = /^[^\s<>"'`]{1,64}$/;
 const RECENT_KEY = 'ls_recent_codes';
 
 const fmtDateTime = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -71,12 +81,25 @@ function demoShipment() {
   };
 }
 
+/** Backend answer -> shipment object. Accepts {status: "label"} and the richer README format. */
+function normalize(code, data) {
+  const obj = typeof data === 'string' ? { status: data } : data && typeof data === 'object' ? data : {};
+  let raw = String(obj.status ?? '').trim();
+  if (!raw) return null;
+  if (STATE[raw]) return { ...obj, code, status: raw };
+  raw = raw.replace(/_/g, ' ');
+  if (raw === raw.toUpperCase()) raw = raw.charAt(0) + raw.slice(1).toLowerCase(); // "IN_CONSEGNA" -> "In consegna"
+  const match = KEYWORDS.find(([, re]) => re.test(raw));
+  return { ...obj, code, status: match ? match[0] : null, label: raw };
+}
+
 function renderShipment(s, { demo = false } = {}) {
-  const status = STATE[s.status] ? s.status : 'in_transit';
-  const [title, ico] = STATE[status];
+  const status = STATE[s.status] ? s.status : null;
+  const [fallbackTitle, ico] = STATE[status] ?? ['', 'package-search'];
+  const title = s.label || fallbackTitle;
   const reached = STEPS.findIndex(([k]) => k === status);
   const progress = STEPS.map(([key, label], i) => {
-    const cls = status === 'exception' ? '' : i < reached ? 'is-done' : i === reached ? 'is-current' : '';
+    const cls = reached < 0 ? '' : i < reached ? 'is-done' : i === reached ? 'is-current' : '';
     return `<li class="${cls}"${i === reached ? ' aria-current="step"' : ''}>${h(label)}</li>`;
   }).join('');
   const eta = asDate(s.eta);
@@ -106,7 +129,7 @@ function renderShipment(s, { demo = false } = {}) {
       </div>
       ${updated ? `<p class="muted mb-0">Ultimo aggiornamento:<br><strong>${h(fmtDateTime.format(updated))}</strong></p>` : ''}
     </div>
-    ${status === 'exception' ? '' : `<ol class="progress" role="list" aria-label="Avanzamento della spedizione">${progress}</ol>`}
+    ${reached < 0 ? '' : `<ol class="progress" role="list" aria-label="Avanzamento della spedizione">${progress}</ol>`}
     ${meta ? `<dl class="track-meta">${meta}</dl>` : ''}
     ${events ? `<h3 class="h4">Cronologia</h3><ol class="events" reversed>${events}</ol>` : ''}
     <div class="track-actions">
@@ -137,20 +160,26 @@ function renderAsk(code, reason) {
       <a class="btn btn-secondary" href="${h(mailLink(`Stato spedizione ${code}`, text))}">${icon('mail')}Scrivi una email</a>
       <a class="btn btn-secondary" href="tel:${h(BUSINESS.phone)}">${icon('phone')}${h(BUSINESS.phoneDisplay)}</a>
     </div>
-    <p class="note mt-s mb-0">${h(BUSINESS.hours)}. Fuori orario ti rispondiamo appena possibile. Vuoi vedere come appare il tracciamento? Prova il codice <button class="linklike" type="button" data-try="${h(TRACKING.demoCode)}">${h(TRACKING.demoCode)}</button>.</p>`;
+    <p class="note mt-s mb-0">${h(BUSINESS.hours)}. Fuori orario ti rispondiamo appena possibile.${
+      TRACKING.demoCode
+        ? ` Vuoi vedere come appare il tracciamento? Prova il codice <button class="linklike" type="button" data-try="${h(TRACKING.demoCode)}">${h(TRACKING.demoCode)}</button>.`
+        : ''
+    }</p>`;
 }
 
 async function fetchShipment(code) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TRACKING.timeoutMs);
   try {
-    const res = await fetch(TRACKING.endpoint.replace('{code}', encodeURIComponent(code)), {
+    const res = await fetch(TRACKING.endpoint, {
+      method: 'POST',
       signal: ctrl.signal,
-      headers: { Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ codice: code }),
     });
-    if (res.status === 404) return { notFound: true };
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return { data: await res.json() };
+    // The backend answers an error status for unknown codes (it has no dedicated 404).
+    if (!res.ok) return { notFound: true };
+    return { data: normalize(code, await res.json()) };
   } finally {
     clearTimeout(timer);
   }
@@ -174,10 +203,10 @@ function setup(root) {
   };
 
   const run = async (raw, { updateUrl = true } = {}) => {
-    const code = String(raw || '').toUpperCase().replace(/\s+/g, '');
+    const code = String(raw || '').replace(/\s+/g, '');
     input.value = code;
     if (!CODE_RE.test(code)) {
-      if (err) err.textContent = code ? 'Il codice contiene caratteri non validi: usa lettere, numeri e trattini.' : 'Inserisci il codice della spedizione.';
+      if (err) err.textContent = code ? 'Il codice contiene caratteri non validi: controllalo sul documento di trasporto.' : 'Inserisci il codice della spedizione.';
       input.setAttribute('aria-invalid', 'true');
       input.focus();
       return;
@@ -186,13 +215,13 @@ function setup(root) {
     input.setAttribute('aria-invalid', 'false');
     if (updateUrl) history.replaceState(null, '', `${location.pathname}?code=${encodeURIComponent(code)}`);
 
-    if (code === TRACKING.demoCode) {
+    if (TRACKING.demoCode && code.toUpperCase() === TRACKING.demoCode) {
       out.innerHTML = renderShipment(demoShipment(), { demo: true });
     } else if (TRACKING.endpoint) {
       out.innerHTML = `<p class="track-state">${icon('loader-circle', 'icon spin')}Ricerca in corso…</p>`;
       try {
         const { data, notFound } = await fetchShipment(code);
-        out.innerHTML = notFound || !data ? renderAsk(code, 'notfound') : renderShipment({ code, ...data });
+        out.innerHTML = notFound || !data ? renderAsk(code, 'notfound') : renderShipment(data);
         if (data) saveRecent(code);
       } catch {
         out.innerHTML = renderAsk(code, 'error');

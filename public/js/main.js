@@ -215,6 +215,15 @@ function initYear() {
   for (const el of $$('[data-year]')) el.textContent = y;
 }
 
+/* Anchors of the previous site (logisticasanchez.com/#chisiamo…) now live on their own pages.
+   Fragments never reach the server, so this cannot be a _redirects rule. */
+function redirectLegacyAnchors() {
+  const legacy = { '#chisiamo': '/chi-siamo/', '#contattaci': '/contatti/', '#tracking': '/tracking/' };
+  const target = location.pathname === '/' && legacy[location.hash];
+  if (target && !document.getElementById(location.hash.slice(1))) location.replace(target);
+}
+
+redirectLegacyAnchors();
 initScroll();
 initMega();
 initDrawer();
