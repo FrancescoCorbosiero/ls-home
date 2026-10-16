@@ -3,3 +3,9 @@
 # also apply when the public/ folder is deployed by drag and drop.
 [build]
   publish = "public"
+
+# Server-side code: netlify/functions/form.mjs sends the quote and contact forms
+# by email with Amazon SES (POST /api/form). Its only dependency is in package.json,
+# which Netlify installs on deploy. Settings: README, "Forms (Amazon SES)".
+[functions]
+  directory = "netlify/functions"

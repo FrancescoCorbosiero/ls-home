@@ -7,3 +7,10 @@
 /contact         /contatti/    301
 /servizi.html    /servizi/     301
 /contatti.html   /contatti/    301
+/tracking.html   /tracking/    301
+/preventivo.html /preventivo/  301
+
+# Links in e-mails sent by the backend (address verification, report, logo) point to
+# https://logisticasanchez.com/mono/... because the backend's EMAIL_ORIGIN defaults to
+# the apex (ls@migration docker-compose.yml): pass them on so they keep working.
+/mono/*          https://app.logisticasanchez.com/mono/:splat  200

@@ -1,0 +1,11 @@
+{
+  "name": "logistica-sanchez-site",
+  "private": true,
+  "description": "Logistica Sanchez website. The site in public/ has no build step: these dependencies are only for the Netlify Function in netlify/functions.",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "3.1145.0"
+  }
+}

@@ -1,10 +1,10 @@
 /**
- * Quote request wizard (4 steps) on top of a plain Netlify form.
+ * Quote request wizard (4 steps) on top of a plain form that posts to /api/form.
  * Without JavaScript every step is visible and the form posts normally.
  * Prefill via URL: /preventivo/?servizio=groupage&da=20831&a=40121&pallet=2&tipo=eur
  */
 import { lookup, describe } from './eta.js';
-import { validate, liveValidation, submitToNetlify, failureMessage } from './forms.js';
+import { validate, liveValidation, submitForm, failureMessage } from './forms.js';
 import { BUSINESS, waLink, escapeHtml as h, icon } from './config.js';
 
 const LABELS = {
@@ -181,7 +181,7 @@ function setup(form) {
     status.className = 'form-status';
     status.textContent = '';
     try {
-      await submitToNetlify(form);
+      await submitForm(form);
       const v = values(form);
       form.innerHTML = `
         <div class="wizard-done" tabindex="-1">

@@ -1,29 +1,35 @@
 /**
  * Shipment tracking widget.
  *  - /tracking/?code=XXX runs a search on load (shareable links)
- *  - TRACKING.endpoint set   -> fetch JSON from the client portal and draw the timeline
+ *  - TRACKING.endpoint set   -> ask the backend (POST {codice}) and show the status
  *  - TRACKING.portalUrl set  -> redirect to the portal page
  *  - neither                 -> one-tap request of the status via WhatsApp / email / phone
  * Recent codes are remembered on this device only (localStorage).
  */
 import { BUSINESS, TRACKING, waLink, mailLink, escapeHtml as h, icon } from './config.js';
 
-const STEPS = [
-  ['created', 'Presa in carico'],
-  ['picked_up', 'Ritirata'],
-  ['in_transit', 'In viaggio'],
-  ['out_for_delivery', 'In consegna'],
-  ['delivered', 'Consegnata'],
+/* Tracking states of the backend: enumeration "statoTracking" (GET /mono/api/enumeration/statoTracking),
+   the same ids, names and labels the CMS uses to set them. trace/state answers one of them in "status".
+   title: what the customer reads; step: label in the progress bar (NON_GESTITO comes before the bar). */
+const STATES = [
+  { id: 0, name: 'NON_GESTITO', label: 'Non gestito', title: 'In attesa di presa in carico', icon: 'clipboard-list' },
+  { id: 1, name: 'PRESA', label: 'Presa in carico', title: 'Presa in carico', step: 'Presa in carico', icon: 'package-check' },
+  { id: 2, name: 'TRANSITO', label: 'Transito', title: 'In transito', step: 'In transito', icon: 'truck' },
+  { id: 3, name: 'TERMINAL_DEST', label: 'Terminal destinatario', title: 'Arrivata al terminal di destinazione', step: 'Terminal di destinazione', icon: 'warehouse' },
+  { id: 4, name: 'ASSEGNATO', label: 'Assegnato', title: 'Affidata al mezzo per la consegna', step: 'In consegna', icon: 'navigation' },
+  { id: 5, name: 'CONSEGNATO', label: 'Consegnato', title: 'Consegnata', step: 'Consegnata', icon: 'circle-check' },
 ];
-const STATE = {
-  created: ['Spedizione presa in carico', 'clipboard-list'],
-  picked_up: ['Merce ritirata', 'package-check'],
-  in_transit: ['In viaggio verso la destinazione', 'truck'],
-  out_for_delivery: ['In consegna oggi', 'navigation'],
-  delivered: ['Consegnata', 'circle-check'],
-  exception: ['Serve un tuo riscontro', 'triangle-alert'],
+const STEPS = STATES.filter((st) => st.step);
+const keyOf = (v) =>
+  String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+/** Finds a state by id (0–5), name ("TRANSITO") or backend label ("Terminal destinatario"). */
+const findState = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const k = keyOf(value);
+  return STATES.find((st) => String(st.id) === k || st.name === k || keyOf(st.label) === k) ?? null;
 };
-const CODE_RE = /^[A-Z0-9][A-Z0-9-]{3,29}$/;
+// Codes are sent exactly as typed (minus spaces): the backend decides what is valid.
+const CODE_RE = /^[^\s<>"'`]{1,64}$/;
 const RECENT_KEY = 'ls_recent_codes';
 
 const fmtDateTime = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -57,27 +63,42 @@ function demoShipment() {
   if (eta.getDay() === 6) eta.setDate(eta.getDate() + 2);
   return {
     code: TRACKING.demoCode,
-    status: 'in_transit',
+    status: 'TRANSITO',
     origin: 'Seregno (MB)',
     destination: 'Bologna (BO)',
     pallets: 2,
     eta: eta.toISOString().slice(0, 10),
     updatedAt: ago(1),
     events: [
-      { time: ago(1), status: 'in_transit', location: 'Hub di Seregno (MB)', note: 'Partita verso la destinazione' },
-      { time: ago(5), status: 'picked_up', location: 'Monza (MB)', note: 'Ritirati 2 pallet EUR 120×80' },
-      { time: ago(26), status: 'created', location: 'Online', note: 'Spedizione presa in carico' },
+      { time: ago(1), status: 'TRANSITO', location: 'Hub di Seregno (MB)', note: 'Partita verso la destinazione' },
+      { time: ago(5), status: 'PRESA', location: 'Monza (MB)', note: 'Ritirati 2 pallet EUR 120×80' },
+      { time: ago(26), status: 'NON_GESTITO', location: 'Online', note: 'Spedizione registrata' },
     ],
   };
 }
 
+/** Backend answer -> shipment object. Accepts {status} alone and the richer README format. */
+function normalize(code, data) {
+  const obj = typeof data === 'string' || typeof data === 'number' ? { status: data } : data && typeof data === 'object' ? data : {};
+  let value = obj.status;
+  if (value && typeof value === 'object') value = value.name ?? value.label ?? value.id; // the whole enum entry
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  const state = findState(raw);
+  // A status we do not know yet is still shown, as the backend wrote it.
+  const label = state ? null : raw === raw.toUpperCase() ? raw.charAt(0) + raw.slice(1).toLowerCase().replace(/_/g, ' ') : raw;
+  return { ...obj, code, state, label };
+}
+
 function renderShipment(s, { demo = false } = {}) {
-  const status = STATE[s.status] ? s.status : 'in_transit';
-  const [title, ico] = STATE[status];
-  const reached = STEPS.findIndex(([k]) => k === status);
-  const progress = STEPS.map(([key, label], i) => {
-    const cls = status === 'exception' ? '' : i < reached ? 'is-done' : i === reached ? 'is-current' : '';
-    return `<li class="${cls}"${i === reached ? ' aria-current="step"' : ''}>${h(label)}</li>`;
+  const { state } = s;
+  const title = state ? state.title : s.label;
+  const ico = state ? state.icon : 'package-search';
+  const delivered = state?.name === 'CONSEGNATO';
+  const reached = state ? STEPS.indexOf(state) : -1;
+  const progress = STEPS.map((st, i) => {
+    const cls = i < reached ? 'is-done' : i === reached ? 'is-current' : '';
+    return `<li class="${cls}"${i === reached ? ' aria-current="step"' : ''}>${h(st.step)}</li>`;
   }).join('');
   const eta = asDate(s.eta);
   const updated = asDate(s.updatedAt);
@@ -85,7 +106,7 @@ function renderShipment(s, { demo = false } = {}) {
     ['Partenza', s.origin],
     ['Destinazione', s.destination],
     ['Colli', s.pallets ? `${s.pallets} pallet` : null],
-    [status === 'delivered' ? 'Consegnata' : 'Consegna prevista', eta ? fmtDate.format(eta) : null],
+    [delivered ? 'Consegnata' : 'Consegna prevista', eta ? fmtDate.format(eta) : null],
   ]
     .filter(([, v]) => v)
     .map(([k, v]) => `<div><dt>${h(k)}</dt><dd>${h(v)}</dd></div>`)
@@ -93,7 +114,7 @@ function renderShipment(s, { demo = false } = {}) {
   const events = (Array.isArray(s.events) ? s.events : [])
     .map((ev) => {
       const t = asDate(ev.time);
-      const label = STATE[ev.status]?.[0] ?? ev.status ?? '';
+      const label = findState(ev.status)?.title ?? ev.status ?? '';
       return `<li><time${t ? ` datetime="${h(t.toISOString())}"` : ''}>${t ? h(fmtDateTime.format(t)) : ''}</time><strong>${h(ev.note || label)}</strong>${ev.location ? `<span>${h(ev.location)}</span>` : ''}</li>`;
     })
     .join('');
@@ -102,11 +123,11 @@ function renderShipment(s, { demo = false } = {}) {
     <div class="track-head">
       <div>
         <p class="track-code">Spedizione ${h(s.code)}${demo ? ' · <span class="badge">Esempio dimostrativo</span>' : ''}</p>
-        <p class="track-state${status === 'delivered' ? ' is-delivered' : status === 'exception' ? ' is-exception' : ''}">${icon(ico)}${h(title)}</p>
+        <p class="track-state${delivered ? ' is-delivered' : ''}">${icon(ico)}${h(title)}</p>
       </div>
       ${updated ? `<p class="muted mb-0">Ultimo aggiornamento:<br><strong>${h(fmtDateTime.format(updated))}</strong></p>` : ''}
     </div>
-    ${status === 'exception' ? '' : `<ol class="progress" role="list" aria-label="Avanzamento della spedizione">${progress}</ol>`}
+    ${state ? `<ol class="progress" role="list" aria-label="Avanzamento della spedizione">${progress}</ol>` : ''}
     ${meta ? `<dl class="track-meta">${meta}</dl>` : ''}
     ${events ? `<h3 class="h4">Cronologia</h3><ol class="events" reversed>${events}</ol>` : ''}
     <div class="track-actions">
@@ -120,6 +141,8 @@ function renderAsk(code, reason) {
   const intro =
     reason === 'notfound'
       ? `Non troviamo la spedizione <strong>${h(code)}</strong> nel sistema: controlla il codice sul documento di trasporto oppure chiedi direttamente a noi.`
+      : reason === 'unhandled'
+        ? `Non ci sono ancora aggiornamenti per la spedizione <strong>${h(code)}</strong>. Se l'hai prenotata da poco è normale; altrimenti controlla il codice sul documento di trasporto oppure chiedi direttamente a noi.`
       : reason === 'error'
         ? `Il servizio di tracciamento non risponde in questo momento. Puoi chiederci lo stato della spedizione <strong>${h(code)}</strong> con un tocco.`
         : `Invia il codice con un tocco: ti rispondiamo con lo <strong>stato aggiornato</strong> e la <strong>finestra di consegna prevista</strong>.`;
@@ -137,20 +160,26 @@ function renderAsk(code, reason) {
       <a class="btn btn-secondary" href="${h(mailLink(`Stato spedizione ${code}`, text))}">${icon('mail')}Scrivi una email</a>
       <a class="btn btn-secondary" href="tel:${h(BUSINESS.phone)}">${icon('phone')}${h(BUSINESS.phoneDisplay)}</a>
     </div>
-    <p class="note mt-s mb-0">${h(BUSINESS.hours)}. Fuori orario ti rispondiamo appena possibile. Vuoi vedere come appare il tracciamento? Prova il codice <button class="linklike" type="button" data-try="${h(TRACKING.demoCode)}">${h(TRACKING.demoCode)}</button>.</p>`;
+    <p class="note mt-s mb-0">${h(BUSINESS.hours)}. Fuori orario ti rispondiamo appena possibile.${
+      TRACKING.demoCode
+        ? ` Vuoi vedere come appare il tracciamento? Prova il codice <button class="linklike" type="button" data-try="${h(TRACKING.demoCode)}">${h(TRACKING.demoCode)}</button>.`
+        : ''
+    }</p>`;
 }
 
 async function fetchShipment(code) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TRACKING.timeoutMs);
   try {
-    const res = await fetch(TRACKING.endpoint.replace('{code}', encodeURIComponent(code)), {
+    const res = await fetch(TRACKING.endpoint, {
+      method: 'POST',
       signal: ctrl.signal,
-      headers: { Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ codice: code }),
     });
-    if (res.status === 404) return { notFound: true };
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return { data: await res.json() };
+    // The backend answers an error status for unknown codes (it has no dedicated 404).
+    if (!res.ok) return { notFound: true };
+    return { data: normalize(code, await res.json()) };
   } finally {
     clearTimeout(timer);
   }
@@ -174,10 +203,10 @@ function setup(root) {
   };
 
   const run = async (raw, { updateUrl = true } = {}) => {
-    const code = String(raw || '').toUpperCase().replace(/\s+/g, '');
+    const code = String(raw || '').replace(/\s+/g, '');
     input.value = code;
     if (!CODE_RE.test(code)) {
-      if (err) err.textContent = code ? 'Il codice contiene caratteri non validi: usa lettere, numeri e trattini.' : 'Inserisci il codice della spedizione.';
+      if (err) err.textContent = code ? 'Il codice contiene caratteri non validi: controllalo sul documento di trasporto.' : 'Inserisci il codice della spedizione.';
       input.setAttribute('aria-invalid', 'true');
       input.focus();
       return;
@@ -186,14 +215,17 @@ function setup(root) {
     input.setAttribute('aria-invalid', 'false');
     if (updateUrl) history.replaceState(null, '', `${location.pathname}?code=${encodeURIComponent(code)}`);
 
-    if (code === TRACKING.demoCode) {
+    if (TRACKING.demoCode && code.toUpperCase() === TRACKING.demoCode) {
       out.innerHTML = renderShipment(demoShipment(), { demo: true });
     } else if (TRACKING.endpoint) {
       out.innerHTML = `<p class="track-state">${icon('loader-circle', 'icon spin')}Ricerca in corso…</p>`;
       try {
         const { data, notFound } = await fetchShipment(code);
-        out.innerHTML = notFound || !data ? renderAsk(code, 'notfound') : renderShipment({ code, ...data });
-        if (data) saveRecent(code);
+        // The backend answers "Non gestito" both for unknown codes and for shipments not yet
+        // handled (ls@migration OrderController.trackingState): show a neutral message, not a state.
+        const unhandled = data?.state?.name === 'NON_GESTITO';
+        out.innerHTML = notFound || !data ? renderAsk(code, 'notfound') : unhandled ? renderAsk(code, 'unhandled') : renderShipment(data);
+        if (data && !unhandled) saveRecent(code);
       } catch {
         out.innerHTML = renderAsk(code, 'error');
       }

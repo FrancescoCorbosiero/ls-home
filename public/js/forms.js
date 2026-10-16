@@ -1,6 +1,7 @@
 /**
- * Forms: Italian validation messages + Netlify Forms submission via fetch.
- * Without JavaScript the forms post natively to Netlify and land on /grazie/.
+ * Forms: Italian validation messages + submission via fetch to /api/form, the Netlify
+ * Function that emails the request with Amazon SES (netlify/functions/form.mjs).
+ * Without JavaScript the forms post natively to the same URL and land on /grazie/.
  */
 import { BUSINESS, escapeHtml } from './config.js';
 
@@ -65,15 +66,15 @@ export function liveValidation(form) {
   });
 }
 
-/** POSTs the form to Netlify Forms (url-encoded, as Netlify expects for AJAX). */
-export async function submitToNetlify(form) {
-  const body = new URLSearchParams(new FormData(form)).toString();
-  const res = await fetch('/', {
+/** POSTs the form to its action (/api/form), url-encoded like a native submission. */
+export async function submitForm(form) {
+  const res = await fetch(form.action, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: new URLSearchParams(new FormData(form)).toString(),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
 }
 
 export const failureMessage = () =>
@@ -100,7 +101,7 @@ export default function init(forms) {
       status.className = 'form-status';
       status.textContent = '';
       try {
-        await submitToNetlify(form);
+        await submitForm(form);
         form.reset();
         status.className = 'form-status is-ok';
         status.textContent = form.dataset.success || 'Grazie! Messaggio ricevuto: ti rispondiamo al più presto.';

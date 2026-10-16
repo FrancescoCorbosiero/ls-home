@@ -3,3 +3,6 @@
 node_modules/
 .DS_Store
 Thumbs.db
+# Netlify CLI (local dev): its state folder and local secrets
+.netlify/
+.env
