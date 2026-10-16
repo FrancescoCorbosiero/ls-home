@@ -106,11 +106,12 @@ Content-Type: application/json
 
 The answer is `{ "status": … }` with one of the tracking states of the backend
 (enumeration `statoTracking`, `GET /mono/api/enumeration/statoTracking`, the same the
-CMS uses to set them); any non-2xx answer means "unknown code".
+CMS uses to set them); a non-2xx answer (e.g. 400 for an empty code) is treated as "unknown
+code".
 
 | id | name | label in the CMS | shown on the site | progress bar |
 |---|---|---|---|---|
-| 0 | `NON_GESTITO` | Non gestito | In attesa di presa in carico | — |
+| 0 | `NON_GESTITO` | Non gestito | neutral "no updates yet" message (also the answer for unknown codes) | — |
 | 1 | `PRESA` | Presa in carico | Presa in carico | step 1 |
 | 2 | `TRANSITO` | Transito | In transito | step 2 |
 | 3 | `TERMINAL_DEST` | Terminal destinatario | Arrivata al terminal di destinazione | step 3 |
@@ -118,7 +119,10 @@ CMS uses to set them); any non-2xx answer means "unknown code".
 | 5 | `CONSEGNATO` | Consegnato | Consegnata | step 5 |
 
 `status` is recognised by id, name or label. A state the site does not know yet is
-still shown, as the backend wrote it, without the progress bar. The states live in
+still shown, as the backend wrote it, without the progress bar. The backend answers
+`200 {"status": "Non gestito"}` both for unknown codes and for shipments not yet handled
+(and 400 for an empty code), so for `NON_GESTITO` the page shows a neutral "no updates yet"
+message with the contact buttons instead of a state. The states live in
 `STATES` in `public/js/tracking.js`; keep them, and the legend on `/tracking/`, in step
 with the backend enumeration. The code is sent exactly as typed, minus spaces.
 Settings live in `TRACKING` in `public/js/config.js`; the backend origin is allowed in

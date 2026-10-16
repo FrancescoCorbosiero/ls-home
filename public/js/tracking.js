@@ -141,6 +141,8 @@ function renderAsk(code, reason) {
   const intro =
     reason === 'notfound'
       ? `Non troviamo la spedizione <strong>${h(code)}</strong> nel sistema: controlla il codice sul documento di trasporto oppure chiedi direttamente a noi.`
+      : reason === 'unhandled'
+        ? `Non ci sono ancora aggiornamenti per la spedizione <strong>${h(code)}</strong>. Se l'hai prenotata da poco è normale; altrimenti controlla il codice sul documento di trasporto oppure chiedi direttamente a noi.`
       : reason === 'error'
         ? `Il servizio di tracciamento non risponde in questo momento. Puoi chiederci lo stato della spedizione <strong>${h(code)}</strong> con un tocco.`
         : `Invia il codice con un tocco: ti rispondiamo con lo <strong>stato aggiornato</strong> e la <strong>finestra di consegna prevista</strong>.`;
@@ -219,8 +221,11 @@ function setup(root) {
       out.innerHTML = `<p class="track-state">${icon('loader-circle', 'icon spin')}Ricerca in corso…</p>`;
       try {
         const { data, notFound } = await fetchShipment(code);
-        out.innerHTML = notFound || !data ? renderAsk(code, 'notfound') : renderShipment(data);
-        if (data) saveRecent(code);
+        // The backend answers "Non gestito" both for unknown codes and for shipments not yet
+        // handled (ls@migration OrderController.trackingState): show a neutral message, not a state.
+        const unhandled = data?.state?.name === 'NON_GESTITO';
+        out.innerHTML = notFound || !data ? renderAsk(code, 'notfound') : unhandled ? renderAsk(code, 'unhandled') : renderShipment(data);
+        if (data && !unhandled) saveRecent(code);
       } catch {
         out.innerHTML = renderAsk(code, 'error');
       }
