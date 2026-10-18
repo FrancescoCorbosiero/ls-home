@@ -12,25 +12,14 @@ export const BUSINESS = {
 };
 
 /**
- * Tracking integration.
- *
- * endpoint:  backend tracking API. It is called with POST {"codice": "<code>"} and
- *            answers {"status": "<status label>"}; any non-2xx answer means the
- *            code is unknown. This is the same call the current production site
- *            makes (see README, "Tracking"). The backend also accepts the richer
- *            JSON described in the README (events, eta, pod…), drawn as a timeline.
- *            Its origin must be listed in "connect-src" in public/_headers, and
- *            the backend must allow CORS from the site's origin.
- * portalUrl: alternatively, a portal page that shows the shipment; the visitor
- *            is redirected there, e.g. "https://portale.example.it/tracking?code={code}"
- * Leave both empty to use the "ask us" flow (code sent via WhatsApp/email/phone).
- * demoCode:  code that renders a sample timeline (labelled as an example); empty
- *            in production so customers never see invented data.
+ * Tracking: the backend API the current production site already calls. It is called with
+ * POST {"codice": "<code>"} and answers {"status": "<tracking state>"}; any non-2xx
+ * answer means the code is unknown (see README, "Backend (tracking)"). Its origin must be
+ * listed in "connect-src" in public/_headers, and the backend must allow CORS from the
+ * site's origin.
  */
 export const TRACKING = {
   endpoint: 'https://app.logisticasanchez.com/mono/api/order/trace/state',
-  portalUrl: '',
-  demoCode: '',
   timeoutMs: 8000,
 };
 

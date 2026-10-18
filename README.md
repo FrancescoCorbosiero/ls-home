@@ -5,8 +5,9 @@ shipping across Italy in 24–72h, groupage, full loads and warehousing.
 
 It is a **plain static site**: HTML, one CSS file and a few small JavaScript modules,
 with no framework and no build step. What is in `public/` is exactly what gets
-published. The only server-side code is one Netlify Function that emails the quote and
-contact forms with Amazon SES; `package.json` lists its single dependency.
+published, so the site can be deployed by dragging `public/` into Netlify, with no
+environment variables. The quote and contact forms are switched off for now (see
+*Forms*): quote requests go through WhatsApp, email and phone.
 
 ## Structure
 
@@ -16,15 +17,14 @@ public/                  ← the website (Netlify publish directory)
   servizi/               services overview + 4 service pages
   zone/                  coverage hub (map, CAP checker) + 5 local pages
   tracking/              shipment tracking
-  preventivo/            4-step quote request (emailed via /api/form)
+  preventivo/            quote request via WhatsApp / email / phone (message prefilled)
   contatti/  chi-siamo/  faq/  blog/ (+4 articles)  privacy/  cookie/
-  grazie/                thank-you page after a form post (noindex)
   404.html
   css/main.css           design system (tokens, components, pages)
   js/main.js             core UI; loads the widgets below only where used
   js/config.js           contacts + tracking integration settings
   js/eta.js              CAP → region → delivery time
-  js/tracking.js  js/quote.js  js/forms.js  js/coverage.js  js/map.js
+  js/tracking.js  js/quote-links.js  js/coverage.js  js/map.js
   img/                   logo (SVG), photos (AVIF/WebP/JPG), icons.svg sprite,
                          pallet drawings, Italy map, Open Graph images
   fonts/                 Barlow + Barlow Condensed, self-hosted and subset
@@ -34,7 +34,7 @@ partials/                shared head, header, footer and CTA band
 tools/sync.mjs           keeps partials + sitemap in sync, checks SEO basics
 tools/pallets.py         regenerates the isometric pallet drawings
 site.config.json         production URL used by the sync tool
-netlify/functions/form.mjs  POST /api/form: validates the forms, emails them with Amazon SES
+netlify/functions/form.mjs  POST /api/form: emails the forms with Amazon SES (unused while forms are off)
 package.json             dependency of the function (@aws-sdk/client-sesv2)
 netlify.toml             tells Netlify to publish public/ and where the function is
 ```
@@ -48,9 +48,7 @@ rather than double-clicking the files:
 npx serve public          # or: python3 -m http.server 8080 -d public
 ```
 
-A static server does not run the function, so the forms answer with their error
-message there. To try them end to end, run `npm install` once and then
-`npx netlify-cli dev`, with the SES variables (see *Forms*) in a local `.env` file.
+That is the whole site: nothing else needs to run.
 
 ## Editing
 
@@ -78,12 +76,11 @@ message there. To try them end to end, run `npm install` once and then
 
 ## Deploy on Netlify
 
-1. Connect the repository: Netlify reads `netlify.toml`, publishes `public/` and
-   deploys the function. (Dragging and dropping `public/` would publish the pages
-   without the function, so the forms would not work.)
-2. **Forms**: set the Amazon SES variables, see *Forms (Amazon SES)* below. Netlify
-   Forms are not used: leave form detection off.
-3. **Domain**: canonical URLs, sitemap and structured data use
+1. Either drag and drop the `public/` folder in *Deploys*, or connect the repository
+   (Netlify reads `netlify.toml` and publishes `public/`). Both work: `_headers` and
+   `_redirects` live inside `public/`, and no environment variable is needed while the
+   forms are off. Netlify Forms are not used: leave form detection off.
+2. **Domain**: canonical URLs, sitemap and structured data use
    `https://logisticasanchez.com` (no `www`, like the current production site). Make
    it the primary domain in Netlify, so `www` redirects to it. Keep it that way: the
    backend only accepts browser calls (CORS) from the origins in its `ALLOWED_ORIGINS`
@@ -129,32 +126,22 @@ with the backend enumeration. The code is sent exactly as typed, minus spaces.
 Settings live in `TRACKING` in `public/js/config.js`; the backend origin is allowed in
 `connect-src` in `public/_headers`.
 
-When the backend can send more detail, the page already draws a full timeline from
-this richer answer (all fields but `status` are optional):
-
-```json
-{
-  "status": "TRANSITO",
-  "origin": "Seregno (MB)",
-  "destination": "Bologna (BO)",
-  "pallets": 2,
-  "eta": "2026-10-14",
-  "updatedAt": "2026-10-13T09:40:00+02:00",
-  "pod": "https://… (optional, link to the signed proof of delivery)",
-  "events": [
-    { "time": "2026-10-13T09:40:00+02:00", "status": "TRANSITO", "location": "Hub di Seregno (MB)", "note": "Partita verso la destinazione" }
-  ]
-}
-```
-
-Setting `TRACKING.demoCode` (e.g. `LS-DEMO`) shows a sample timeline for that code,
-useful when working on the design; it is empty in production.
+The site uses only `status`: it does not depend on any field or endpoint the backend
+does not offer today.
 
 Orders are placed on the order portal (`https://ordini.logisticasanchez.com`), linked
 from the header, footer and home page. Quote and contact requests do not go through the
-backend: the function below emails them.
+backend.
 
-## Forms (Amazon SES)
+## Forms (Amazon SES) — currently off
+
+The forms are hidden for now (commit `91f33ee`): `/preventivo/` offers WhatsApp,
+email and phone, with the request prefilled by `js/quote-links.js`, and `/contatti/`
+lists the channels. The function `netlify/functions/form.mjs` is still in the
+repository but no page calls it. To bring the forms back, run
+`git revert 91f33ee`, deploy by connecting the repository (drag and drop does not
+publish functions) and set the variables below. What follows describes them as they
+work when switched on.
 
 Both forms (`preventivo`, `contatti`) post to `/api/form`, handled by
 `netlify/functions/form.mjs`. It checks the fields again on the server, drops spam
@@ -221,8 +208,6 @@ proxy): the links and the logo in the e-mails the backend sends use
 - [ ] Review the service copy: delivery zones, warehousing, accessory services
       (tail lift, appointments, extra insurance) and the towns listed on local pages
       describe a typical pallet hub — keep only what Logistica Sanchez actually offers.
-- [ ] Set the SES variables (see *Forms*), then send a test request from both forms
-      on the published site.
 - [ ] Make `logisticasanchez.com` the primary domain (see *Deploy*).
 - [ ] Look up a real shipment code on `/tracking/` from the published site and check
       that the status shows up (this proves CORS and the CSP are right).

@@ -1,9 +1,8 @@
 /**
  * Shipment tracking widget.
  *  - /tracking/?code=XXX runs a search on load (shareable links)
- *  - TRACKING.endpoint set   -> ask the backend (POST {codice}) and show the status
- *  - TRACKING.portalUrl set  -> redirect to the portal page
- *  - neither                 -> one-tap request of the status via WhatsApp / email / phone
+ *  - the code is sent to the backend (POST {codice}) and the status it answers is shown
+ *  - unknown code or backend unreachable -> one-tap request of the status via WhatsApp / email / phone
  * Recent codes are remembered on this device only (localStorage).
  */
 import { BUSINESS, TRACKING, waLink, mailLink, escapeHtml as h, icon } from './config.js';
@@ -32,13 +31,6 @@ const findState = (value) => {
 const CODE_RE = /^[^\s<>"'`]{1,64}$/;
 const RECENT_KEY = 'ls_recent_codes';
 
-const fmtDateTime = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-const fmtDate = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-const asDate = (v) => {
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-};
-
 function readRecent() {
   try {
     return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').filter((c) => CODE_RE.test(c)).slice(0, 4);
@@ -55,29 +47,7 @@ function saveRecent(code) {
   }
 }
 
-function demoShipment() {
-  const now = Date.now();
-  const ago = (hours) => new Date(now - hours * 3600e3).toISOString();
-  const eta = new Date(now + 24 * 3600e3);
-  if (eta.getDay() === 0) eta.setDate(eta.getDate() + 1);
-  if (eta.getDay() === 6) eta.setDate(eta.getDate() + 2);
-  return {
-    code: TRACKING.demoCode,
-    status: 'TRANSITO',
-    origin: 'Seregno (MB)',
-    destination: 'Bologna (BO)',
-    pallets: 2,
-    eta: eta.toISOString().slice(0, 10),
-    updatedAt: ago(1),
-    events: [
-      { time: ago(1), status: 'TRANSITO', location: 'Hub di Seregno (MB)', note: 'Partita verso la destinazione' },
-      { time: ago(5), status: 'PRESA', location: 'Monza (MB)', note: 'Ritirati 2 pallet EUR 120×80' },
-      { time: ago(26), status: 'NON_GESTITO', location: 'Online', note: 'Spedizione registrata' },
-    ],
-  };
-}
-
-/** Backend answer -> shipment object. Accepts {status} alone and the richer README format. */
+/** Backend answer {status} -> shipment object. */
 function normalize(code, data) {
   const obj = typeof data === 'string' || typeof data === 'number' ? { status: data } : data && typeof data === 'object' ? data : {};
   let value = obj.status;
@@ -87,10 +57,10 @@ function normalize(code, data) {
   const state = findState(raw);
   // A status we do not know yet is still shown, as the backend wrote it.
   const label = state ? null : raw === raw.toUpperCase() ? raw.charAt(0) + raw.slice(1).toLowerCase().replace(/_/g, ' ') : raw;
-  return { ...obj, code, state, label };
+  return { code, state, label };
 }
 
-function renderShipment(s, { demo = false } = {}) {
+function renderShipment(s) {
   const { state } = s;
   const title = state ? state.title : s.label;
   const ico = state ? state.icon : 'package-search';
@@ -100,38 +70,16 @@ function renderShipment(s, { demo = false } = {}) {
     const cls = i < reached ? 'is-done' : i === reached ? 'is-current' : '';
     return `<li class="${cls}"${i === reached ? ' aria-current="step"' : ''}>${h(st.step)}</li>`;
   }).join('');
-  const eta = asDate(s.eta);
-  const updated = asDate(s.updatedAt);
-  const meta = [
-    ['Partenza', s.origin],
-    ['Destinazione', s.destination],
-    ['Colli', s.pallets ? `${s.pallets} pallet` : null],
-    [delivered ? 'Consegnata' : 'Consegna prevista', eta ? fmtDate.format(eta) : null],
-  ]
-    .filter(([, v]) => v)
-    .map(([k, v]) => `<div><dt>${h(k)}</dt><dd>${h(v)}</dd></div>`)
-    .join('');
-  const events = (Array.isArray(s.events) ? s.events : [])
-    .map((ev) => {
-      const t = asDate(ev.time);
-      const label = findState(ev.status)?.title ?? ev.status ?? '';
-      return `<li><time${t ? ` datetime="${h(t.toISOString())}"` : ''}>${t ? h(fmtDateTime.format(t)) : ''}</time><strong>${h(ev.note || label)}</strong>${ev.location ? `<span>${h(ev.location)}</span>` : ''}</li>`;
-    })
-    .join('');
   const shareUrl = `${location.origin}/tracking/?code=${encodeURIComponent(s.code)}`;
   return `
     <div class="track-head">
       <div>
-        <p class="track-code">Spedizione ${h(s.code)}${demo ? ' · <span class="badge">Esempio dimostrativo</span>' : ''}</p>
+        <p class="track-code">Spedizione ${h(s.code)}</p>
         <p class="track-state${delivered ? ' is-delivered' : ''}">${icon(ico)}${h(title)}</p>
       </div>
-      ${updated ? `<p class="muted mb-0">Ultimo aggiornamento:<br><strong>${h(fmtDateTime.format(updated))}</strong></p>` : ''}
     </div>
     ${state ? `<ol class="progress" role="list" aria-label="Avanzamento della spedizione">${progress}</ol>` : ''}
-    ${meta ? `<dl class="track-meta">${meta}</dl>` : ''}
-    ${events ? `<h3 class="h4">Cronologia</h3><ol class="events" reversed>${events}</ol>` : ''}
     <div class="track-actions">
-      ${s.pod ? `<a class="btn btn-primary btn-sm" href="${h(s.pod)}" target="_blank" rel="noopener">${icon('file-check')}Scarica la prova di consegna</a>` : ''}
       <button class="btn btn-secondary btn-sm" type="button" data-copy="${h(shareUrl)}">${icon('copy')}<span>Copia il link</span></button>
       <a class="btn btn-secondary btn-sm" href="${h(waLink(`Ciao ${BUSINESS.name}, ho una domanda sulla spedizione ${s.code}.`))}" target="_blank" rel="noopener">${icon('whatsapp', 'icon icon-wa')}Hai bisogno di aiuto?</a>
     </div>`;
@@ -143,9 +91,7 @@ function renderAsk(code, reason) {
       ? `Non troviamo la spedizione <strong>${h(code)}</strong> nel sistema: controlla il codice sul documento di trasporto oppure chiedi direttamente a noi.`
       : reason === 'unhandled'
         ? `Non ci sono ancora aggiornamenti per la spedizione <strong>${h(code)}</strong>. Se l'hai prenotata da poco è normale; altrimenti controlla il codice sul documento di trasporto oppure chiedi direttamente a noi.`
-      : reason === 'error'
-        ? `Il servizio di tracciamento non risponde in questo momento. Puoi chiederci lo stato della spedizione <strong>${h(code)}</strong> con un tocco.`
-        : `Invia il codice con un tocco: ti rispondiamo con lo <strong>stato aggiornato</strong> e la <strong>finestra di consegna prevista</strong>.`;
+      : `Il servizio di tracciamento non risponde in questo momento. Puoi chiederci lo stato della spedizione <strong>${h(code)}</strong> con un tocco.`;
   const text = `Ciao ${BUSINESS.name}, vorrei lo stato della spedizione ${code}. Grazie!`;
   return `
     <div class="track-head">
@@ -160,11 +106,7 @@ function renderAsk(code, reason) {
       <a class="btn btn-secondary" href="${h(mailLink(`Stato spedizione ${code}`, text))}">${icon('mail')}Scrivi una email</a>
       <a class="btn btn-secondary" href="tel:${h(BUSINESS.phone)}">${icon('phone')}${h(BUSINESS.phoneDisplay)}</a>
     </div>
-    <p class="note mt-s mb-0">${h(BUSINESS.hours)}. Fuori orario ti rispondiamo appena possibile.${
-      TRACKING.demoCode
-        ? ` Vuoi vedere come appare il tracciamento? Prova il codice <button class="linklike" type="button" data-try="${h(TRACKING.demoCode)}">${h(TRACKING.demoCode)}</button>.`
-        : ''
-    }</p>`;
+    <p class="note mt-s mb-0">${h(BUSINESS.hours)}. Fuori orario ti rispondiamo appena possibile.</p>`;
 }
 
 async function fetchShipment(code) {
@@ -215,27 +157,16 @@ function setup(root) {
     input.setAttribute('aria-invalid', 'false');
     if (updateUrl) history.replaceState(null, '', `${location.pathname}?code=${encodeURIComponent(code)}`);
 
-    if (TRACKING.demoCode && code.toUpperCase() === TRACKING.demoCode) {
-      out.innerHTML = renderShipment(demoShipment(), { demo: true });
-    } else if (TRACKING.endpoint) {
-      out.innerHTML = `<p class="track-state">${icon('loader-circle', 'icon spin')}Ricerca in corso…</p>`;
-      try {
-        const { data, notFound } = await fetchShipment(code);
-        // The backend answers "Non gestito" both for unknown codes and for shipments not yet
-        // handled (ls@migration OrderController.trackingState): show a neutral message, not a state.
-        const unhandled = data?.state?.name === 'NON_GESTITO';
-        out.innerHTML = notFound || !data ? renderAsk(code, 'notfound') : unhandled ? renderAsk(code, 'unhandled') : renderShipment(data);
-        if (data && !unhandled) saveRecent(code);
-      } catch {
-        out.innerHTML = renderAsk(code, 'error');
-      }
-    } else if (TRACKING.portalUrl) {
-      saveRecent(code);
-      location.href = TRACKING.portalUrl.replace('{code}', encodeURIComponent(code));
-      return;
-    } else {
-      saveRecent(code);
-      out.innerHTML = renderAsk(code);
+    out.innerHTML = `<p class="track-state">${icon('loader-circle', 'icon spin')}Ricerca in corso…</p>`;
+    try {
+      const { data, notFound } = await fetchShipment(code);
+      // The backend answers "Non gestito" both for unknown codes and for shipments not yet
+      // handled (ls@migration OrderController.trackingState): show a neutral message, not a state.
+      const unhandled = data?.state?.name === 'NON_GESTITO';
+      out.innerHTML = notFound || !data ? renderAsk(code, 'notfound') : unhandled ? renderAsk(code, 'unhandled') : renderShipment(data);
+      if (data && !unhandled) saveRecent(code);
+    } catch {
+      out.innerHTML = renderAsk(code, 'error');
     }
     renderRecent();
     out.focus({ preventScroll: true });

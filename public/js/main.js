@@ -238,11 +238,10 @@ initYear();
 /* Page widgets, loaded only where they are used. */
 const widgets = [
   ['[data-tracking]', () => import('./tracking.js')],
-  ['[data-quote]', () => import('./quote.js')],
+  ['[data-quote-links]', () => import('./quote-links.js')],
   ['[data-eta-form]', () => import('./eta.js')],
   ['[data-coverage]', () => import('./coverage.js')],
   ['[data-map]', () => import('./map.js')],
-  ['[data-ajax-form]', () => import('./forms.js')],
 ];
 for (const [selector, load] of widgets) {
   const nodes = $$(selector);
