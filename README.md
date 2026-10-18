@@ -129,26 +129,8 @@ with the backend enumeration. The code is sent exactly as typed, minus spaces.
 Settings live in `TRACKING` in `public/js/config.js`; the backend origin is allowed in
 `connect-src` in `public/_headers`.
 
-When the backend can send more detail, the page already draws a full timeline from
-this richer answer (all fields but `status` are optional):
-
-```json
-{
-  "status": "TRANSITO",
-  "origin": "Seregno (MB)",
-  "destination": "Bologna (BO)",
-  "pallets": 2,
-  "eta": "2026-10-14",
-  "updatedAt": "2026-10-13T09:40:00+02:00",
-  "pod": "https://… (optional, link to the signed proof of delivery)",
-  "events": [
-    { "time": "2026-10-13T09:40:00+02:00", "status": "TRANSITO", "location": "Hub di Seregno (MB)", "note": "Partita verso la destinazione" }
-  ]
-}
-```
-
-Setting `TRACKING.demoCode` (e.g. `LS-DEMO`) shows a sample timeline for that code,
-useful when working on the design; it is empty in production.
+The site uses only `status`: it does not depend on any field or endpoint the backend
+does not offer today.
 
 Orders are placed on the order portal (`https://ordini.logisticasanchez.com`), linked
 from the header, footer and home page. Quote and contact requests do not go through the
