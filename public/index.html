@@ -140,7 +140,13 @@
 <main id="main">
 
   <section class="hero" aria-labelledby="hero-title">
-    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="hero-bg has-photo" aria-hidden="true">
+      <picture>
+        <source type="image/avif" srcset="/img/photos/hero-bg.avif">
+        <source type="image/webp" srcset="/img/photos/hero-bg.webp">
+        <img class="hero-bg-img is-soft" src="/img/photos/hero-bg.jpg" width="1280" height="567" alt="" decoding="async">
+      </picture>
+    </div>
     <div class="container hero-grid">
       <div class="hero-copy">
         <p class="hero-kicker"><span class="dot-live" aria-hidden="true"></span><span>Hub di Seregno (MB)<span class="hide-mobile"> · Ritiri in Lombardia, consegne in tutta Italia</span></span></p>
@@ -162,9 +168,9 @@
       <div class="hero-media">
         <div class="hero-photo">
           <picture>
-            <source type="image/avif" srcset="/img/photos/hero-trucks-520.avif 520w, /img/photos/hero-trucks-800.avif 800w, /img/photos/hero-trucks-1200.avif 1200w" sizes="(min-width: 1280px) 530px, (min-width: 1024px) 42vw, (min-width: 600px) 560px, calc(100vw - 32px)">
-            <source type="image/webp" srcset="/img/photos/hero-trucks-520.webp 520w, /img/photos/hero-trucks-800.webp 800w, /img/photos/hero-trucks-1200.webp 1200w" sizes="(min-width: 1280px) 530px, (min-width: 1024px) 42vw, (min-width: 600px) 560px, calc(100vw - 32px)">
-            <img src="/img/photos/hero-trucks-800.jpg" srcset="/img/photos/hero-trucks-520.jpg 520w, /img/photos/hero-trucks-800.jpg 800w, /img/photos/hero-trucks-1200.jpg 1200w" sizes="(min-width: 1280px) 530px, (min-width: 1024px) 42vw, (min-width: 600px) 560px, calc(100vw - 32px)" width="1200" height="1020" alt="Camion in viaggio su una strada extraurbana al tramonto" fetchpriority="high" decoding="async">
+            <source type="image/avif" srcset="/img/photos/hero-hub-520.avif 520w, /img/photos/hero-hub-800.avif 800w, /img/photos/hero-hub-1200.avif 1200w" sizes="(min-width: 1280px) 530px, (min-width: 1024px) 42vw, (min-width: 600px) 560px, calc(100vw - 32px)">
+            <source type="image/webp" srcset="/img/photos/hero-hub-520.webp 520w, /img/photos/hero-hub-800.webp 800w, /img/photos/hero-hub-1200.webp 1200w" sizes="(min-width: 1280px) 530px, (min-width: 1024px) 42vw, (min-width: 600px) 560px, calc(100vw - 32px)">
+            <img src="/img/photos/hero-hub-800.jpg" srcset="/img/photos/hero-hub-520.jpg 520w, /img/photos/hero-hub-800.jpg 800w, /img/photos/hero-hub-1200.jpg 1200w" sizes="(min-width: 1280px) 530px, (min-width: 1024px) 42vw, (min-width: 600px) 560px, calc(100vw - 32px)" width="1200" height="1600" alt="Carrello elevatore nel magazzino di Seregno, con un camion telonato carico di pallet sulla baia di carico" fetchpriority="high" decoding="async">
           </picture>
         </div>
         <div class="hero-badge">
