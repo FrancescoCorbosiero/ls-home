@@ -67,6 +67,11 @@ That is the whole site: nothing else needs to run.
 - **New page**: copy a similar page into a new folder (`public/new-page/index.html`),
   update `<title>`, description, canonical, Open Graph tags and JSON-LD, set
   `<body data-page="…">`, then run the sync tool.
+- **Home hero photos**: the photo on the right is `img/photos/hero-hub-{520,800,1200}`
+  in `.avif`, `.webp` and `.jpg`; the background photo is `img/photos/hero-bg.*`, under a
+  navy overlay. To drop the background photo, remove the `<picture>` inside
+  `<div class="hero-bg has-photo">` in `index.html` and the `has-photo` class: the grid
+  pattern comes back. `is-soft` blurs it slightly (the current one is low resolution).
 - **Icons**: the sprite is `public/img/icons.svg` ([Lucide](https://lucide.dev)
   icons). To add one, copy the icon's inner SVG into a new `<symbol id="i-name">` and
   use it with `<svg class="icon"><use href="/img/icons.svg#i-name"/></svg>`.
@@ -216,8 +221,8 @@ proxy): the links and the logo in the e-mails the backend sends use
       e-mail links take the same route).
 - [ ] Submit `sitemap.xml` to Google Search Console and link the site from the Google
       Business Profile.
-- [ ] Replace the stock truck photo (`img/photos/`) with real photos of the hub and
-      vehicles when available — same file names, or update the `<picture>` tags.
+- [ ] Replace the stock truck photo on *Carico completo* (`img/photos/road-convoy-*`)
+      with a real one when available — same file names, or update the `<picture>` tag.
 
 ## Credits
 

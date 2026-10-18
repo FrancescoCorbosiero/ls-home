@@ -1102,6 +1102,33 @@ hr {
   -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 92%);
   mask-image: linear-gradient(180deg, #000 30%, transparent 92%);
 }
+/* Optional background photo: put a <picture> with .hero-bg-img inside .hero-bg and add
+   .has-photo to it (index.html). The navy overlay keeps the text readable; without the
+   photo the hero shows the grid pattern above. .is-soft blurs a low-resolution photo. */
+.hero-bg.has-photo::before {
+  display: none;
+}
+.hero-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 40%;
+}
+.hero-bg-img.is-soft {
+  filter: blur(2px);
+  transform: scale(1.04);
+}
+.hero-bg.has-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(55% 70% at 88% 8%, rgb(10 151 176 / 0.28), transparent 62%),
+    linear-gradient(90deg, rgb(4 35 59 / 0.92) 0%, rgb(4 35 59 / 0.74) 45%, rgb(4 35 59 / 0.5) 100%),
+    linear-gradient(180deg, transparent 60%, rgb(4 35 59 / 0.9));
+}
 .hero-grid {
   display: grid;
   gap: 36px;
