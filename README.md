@@ -15,10 +15,11 @@ environment variables. The quote and contact forms are switched off for now (see
 public/                  ← the website (Netlify publish directory)
   index.html             home
   servizi/               services overview + 4 service pages
-  zone/                  coverage hub (map, CAP checker) + 5 local pages
+  zone/                  coverage hub (map, CAP checker) + 15 local pages (Seregno, 12
+                         Lombard provinces, Torino, Verona)
   tracking/              shipment tracking
   preventivo/            quote request via WhatsApp / email / phone (message prefilled)
-  contatti/  chi-siamo/  faq/  blog/ (+4 articles)  privacy/  cookie/
+  contatti/  chi-siamo/  faq/  blog/ (+7 articles)  privacy/  cookie/
   404.html
   css/main.css           design system (tokens, components, pages)
   js/main.js             core UI; loads the widgets below only where used
@@ -196,6 +197,9 @@ If an email does not arrive, the reason is in the function log (*Logs → Functi
 form* in Netlify); the visitor sees a message with the email and WhatsApp contacts.
 
 ## SEO
+
+The local SEO plan (Google Business Profile, reviews, directories, what to measure and
+what to check with the owner) is in `docs/seo-locale.md`, in Italian.
 
 Every page has a unique title and description, canonical URL, Open Graph/Twitter card
 with its own image, visible breadcrumbs and JSON-LD: `LocalBusiness` + `WebSite` on
